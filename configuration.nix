@@ -30,6 +30,12 @@
     extraGroups = [ "wheel" "networkmanager" "video" "input" ];
     initialPassword = "864235";
   };
-
+  services.greetd = {
+  enable = true;
+  settings.default_session = {
+    command = "Hyprland";
+    user = "cameron";
+  };
+};
   system.stateVersion = "24.11";
 }

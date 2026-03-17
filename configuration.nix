@@ -1,45 +1,90 @@
 { config, lib, pkgs, ... }:
 
 {
-  imports =
-    [
-      ./hardware-configuration.nix
-    ];
+  imports = [
+    ./hardware-configuration.nix
+  ];
 
+  # ── Boot ──────────────────────────────────────────────────────────────────
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  services.getty.autologinUser = "cameron";
-
+  # ── Networking ────────────────────────────────────────────────────────────
   networking.hostName = "nixos";
   networking.networkmanager.enable = true;
 
+  # ── Locale & Time ─────────────────────────────────────────────────────────
   time.timeZone = "America/Kentucky/Louisville";
+  i18n.defaultLocale = "en_US.UTF-8";
 
+  # ── Intel GPU ─────────────────────────────────────────────────────────────
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [
+      intel-media-driver   # VAAPI for hardware video decode (Broadwell+)
+      intel-compute-runtime
+    ];
+  };
+
+  # ── Power Management ──────────────────────────────────────────────────────
+  powerManagement.enable = true;
+  services.thermald.enable = true;  # Intel thermal daemon
+  services.auto-cpufreq = {
+    enable = true;
+    settings = {
+      battery = {
+        governor = "powersave";
+        turbo = "auto";
+      };
+      charger = {
+        governor = "performance";
+        turbo = "auto";
+      };
+    };
+  };
+
+  # ── Audio (PipeWire) ──────────────────────────────────────────────────────
+  services.pulseaudio.enable = false;
+  security.rtkit.enable = true;
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+  };
+
+  # ── Hyprland ──────────────────────────────────────────────────────────────
   programs.hyprland = {
     enable = true;
     withUWSM = true;
     xwayland.enable = true;
   };
 
+  # ── Login / Auto-login ────────────────────────────────────────────────────
+  services.getty.autologinUser = "cameron";
+
+  # ── Users ─────────────────────────────────────────────────────────────────
   users.users.cameron = {
     isNormalUser = true;
-    extraGroups = [ "wheel" ];
-    packages = with pkgs; [
-      tree
-    ];
+    extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
   };
 
-  programs.firefox.enable = true;
+  # ── System Packages ───────────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     vim
     wget
-    foot
-    waybar
-    kitty
+    git
+    htop
+    brightnessctl   # backlight control
+    playerctl       # media key control
+    networkmanagerapplet
   ];
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  system.stateVersion = "25.05";
+  # ── Programs ──────────────────────────────────────────────────────────────
+  programs.firefox.enable = true;
 
+  # ── Nix Settings ──────────────────────────────────────────────────────────
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+  system.stateVersion = "25.05";
 }
